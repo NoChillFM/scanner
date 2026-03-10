@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventory Scanner Tool</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --pill-track: #d1d5db;
+      --pill-thumb: #ffffff;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark {
+      --bg: #0f172a;
+      --surface: #111827;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #334155;
+      --primary: #60a5fa;
+      --primary-hover: #93c5fd;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #fbbf24;
+      --pill-track: #334155;
+      --pill-thumb: #e5e7eb;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 32px auto;
+      padding: 0 16px 32px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    p.sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    /* ── Theme toggle pill ── */
+    .pill {
+      position: relative;
+      width: 58px;
+      height: 30px;
+      background: var(--pill-track);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .pill::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--pill-thumb);
+      transition: transform 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    body.dark .pill::after {
+      transform: translateX(28px);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    /* ── Hidden file input ── */
+    input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Styled file-choose button ── */
+    .file-btn-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .file-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+      white-space: nowrap;
+    }
+
+    .file-btn:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .file-btn:active {
+      transform: scale(0.97);
+    }
+
+    .file-btn svg {
+      flex-shrink: 0;
+    }
+
+    .file-name {
+      font-size: 0.88rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    /* ── Hidden scan input ── */
+    #scanInput {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Scanner-active indicator ── */
+    .scanner-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(148, 163, 184, 0.08);
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .scanner-indicator:hover {
+      background: rgba(148, 163, 184, 0.15);
+    }
+
+    .scanner-indicator.active {
+      border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+      background: color-mix(in srgb, var(--primary) 6%, transparent);
+    }
+
+    .scanner-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.2s ease;
+    }
+
+    .scanner-indicator.active .scanner-dot {
+      background: var(--success);
+      animation: pulse-dot 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent); }
+      50%       { box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 0%, transparent); }
+    }
+
+    .scanner-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      transition: color 0.2s ease;
+    }
+
+    .scanner-indicator.active .scanner-label {
+      color: var(--text);
+    }
+
+    .scanner-hint {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Status box ── */
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: transparent;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .status {
+      margin-top: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      background: rgba(148, 163, 184, 0.08);
+      font-weight: 600;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+    }
+
+    .status.success {
+      border-color: color-mix(in srgb, var(--success) 40%, var(--border));
+      color: var(--success);
+      animation: flash-success 250ms ease;
+    }
+
+    .status.error {
+      border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+      color: var(--danger);
+      animation: flash-error 250ms ease;
+    }
+
+    /* ── Stats bar ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(148, 163, 184, 0.06);
+      gap: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .stat-item.found .stat-value  { color: var(--success); }
+    .stat-item.missing .stat-value { color: var(--danger); }
+
+    /* ── Organization grid ── */
+    #orgSection { display: none; }
+
+    .org-grid-label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .org-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .org-pill {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(148, 163, 184, 0.06);
+      transition: border-color 0.2s ease, background 0.2s ease;
+      cursor: default;
+    }
+
+    .org-pill[data-state="complete"] {
+      border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+      background: color-mix(in srgb, var(--success) 8%, transparent);
+    }
+
+    .org-pill[data-state="partial"] {
+      border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+      background: color-mix(in srgb, var(--warning) 6%, transparent);
+    }
+
+    .org-pill-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .org-pill-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .org-pill-count {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .org-pill[data-state="complete"] .org-pill-count { color: var(--success); }
+    .org-pill[data-state="partial"]  .org-pill-count { color: var(--warning); }
+
+    .org-pill-bar-track {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .org-pill-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--muted);
+      transition: width 0.3s ease;
+    }
+
+    .org-pill[data-state="complete"] .org-pill-bar-fill { background: var(--success); }
+    .org-pill[data-state="partial"]  .org-pill-bar-fill { background: var(--warning); }
+
+    /* ── Misc ── */
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .meta {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .history {
+      margin-top: 10px;
+      max-height: 300px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .badge.found {
+      color: #fff;
+      background: var(--success);
+    }
+
+    .badge.missing {
+      color: #fff;
+      background: var(--danger);
+    }
+
+    @keyframes flash-success {
+      from { background: rgba(22, 163, 74, 0.18); }
+      to { background: rgba(148, 163, 184, 0.08); }
+    }
+
+    @keyframes flash-error {
+      from { background: rgba(220, 38, 38, 0.18); }
+      to { background: rgba(148, 163, 184, 0.08); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+
+    <!-- ── Header ── -->
+    <section class="card header">
+      <div>
+        <h1>Inventory ID Scanner</h1>
+        <p class="sub">Upload CSV, scan rapidly, and get instant feedback.</p>
+      </div>
+      <div class="theme-toggle">
+        <span>Light</span>
+        <button id="themeBtn" class="pill" aria-label="Toggle theme" title="Toggle light/dark mode"></button>
+        <span>Dark</span>
+      </div>
+    </section>
+
+    <!-- ── CSV Upload ── -->
+    <section class="card">
+      <label>Upload inventory CSV</label>
+      <div class="file-btn-wrap" style="margin-top: 10px;">
+        <input id="csvFile" type="file" accept=".csv,text/csv" tabindex="-1" aria-hidden="true" />
+        <button class="file-btn" id="fileBtnTrigger" type="button" aria-label="Choose CSV file">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Choose File
+        </button>
+        <span id="fileName" class="file-name">No file chosen</span>
+      </div>
+      <div id="loadInfo" class="meta">No CSV loaded.</div>
+    </section>
+
+    <!-- ── Scanner card ── -->
+    <section class="card">
+      <!-- Hidden text input — receives scanner keystrokes invisibly -->
+      <input id="scanInput" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" />
+
+      <!-- Visible scanner status indicator -->
+      <div id="scannerIndicator" class="scanner-indicator" role="button" tabindex="0"
+           aria-label="Click to activate scanner input" title="Click anywhere here to re-focus the scanner">
+        <span class="scanner-dot"></span>
+        <span class="scanner-label" id="scannerLabel">Scanner inactive — click to activate</span>
+        <span class="scanner-hint">↵ per scan</span>
+      </div>
+
+      <div id="status" class="status" style="margin-top: 12px;">Ready. Load a CSV and begin scanning.</div>
+    </section>
+
+    <!-- ── Scan stats ── -->
+    <section class="card">
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total Scans</div>
+        </div>
+        <div class="stat-item found">
+          <div class="stat-value" id="statFound">0</div>
+          <div class="stat-label">Found</div>
+        </div>
+        <div class="stat-item missing">
+          <div class="stat-value" id="statMissing">0</div>
+          <div class="stat-label">Missing</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Organization grid (shown after CSV load) ── -->
+    <section class="card" id="orgSection">
+      <div class="org-grid-label">
+        <label>Organizations</label>
+        <span id="orgMeta" class="muted"></span>
+      </div>
+      <div id="orgGrid" class="org-grid"></div>
+    </section>
+
+    <!-- ── Scan history ── -->
+    <section class="card">
+      <div class="row" style="justify-content: space-between; align-items: baseline;">
+        <label>Scan history</label>
+        <span id="scanCount" class="muted">0 scans</span>
+      </div>
+      <div class="history">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Input</th>
+              <th>Result</th>
+              <th>Inventory ID</th>
+              <th>Product</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
