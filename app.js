@@ -246,7 +246,6 @@ function findMatch(rawInput) {
 function processScan(inputValue) {
   if (!knownByInventoryId.size) {
     setStatus('Please upload a CSV before scanning.', 'error');
-    vibrate([120, 60, 120]);
     addHistory(inputValue, false, null);
     uniqueMissingInputs.add(inputValue.trim().toLowerCase());
     updateStatsUI();
@@ -270,7 +269,6 @@ function processScan(inputValue) {
     renderOrgGrid();
   } else {
     setStatus(`Not found: ${inputValue}`, 'error');
-    vibrate([90, 40, 90]);
     addHistory(inputValue, false, null);
     uniqueMissingInputs.add(inputValue.trim().toLowerCase());
     updateStatsUI();
