@@ -98,6 +98,8 @@ function parseCsv(text) {
 }
 
 // ── Persistence ──
+let _saveTimer = null;
+
 function saveSession() {
   try {
     const data = {
@@ -107,6 +109,11 @@ function saveSession() {
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
   } catch { /* storage full — silently skip */ }
+}
+
+function saveSessionDeferred() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveSession, 500);
 }
 
 function loadSession() {
@@ -470,13 +477,8 @@ scanInput.addEventListener('keydown', (e) => {
 
   if (lastMessage) setStatus(lastMessage, lastType);
 
-  // Batch heavy updates once per burst
+  // Immediate feedback path (must feel instant)
   updateStatsUI();
-  renderOrgGrid();
-  renderDeviceList();
-  saveSession();
-
-  // Vibrate per found item (single call pattern avoids overwrite from rapid repeats)
   if (foundCountInBurst > 0) {
     const pattern = [];
     for (let i = 0; i < foundCountInBurst; i += 1) {
@@ -485,8 +487,14 @@ scanInput.addEventListener('keydown', (e) => {
     }
     vibrate(pattern);
   }
-
   focusScannerInput();
+
+  // Defer heavier work so it doesn't block scan-to-status latency
+  setTimeout(() => {
+    renderOrgGrid();
+    renderDeviceList();
+    saveSessionDeferred();
+  }, 0);
 });
 
 // Scanner focus/blur indicator
