@@ -294,21 +294,22 @@ function renderDeviceList() {
 
   deviceListSection.style.display = 'block';
   const filtered = getFilteredRows();
-  deviceListBody.innerHTML = '';
 
+  let html = '';
   for (const row of filtered) {
     const id = (row.inventory_id || '').trim().toLowerCase();
     const isFound = uniqueFoundIds.has(id);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${getOrgName(row)}</td>
-      <td>${row.serial_number || '—'}</td>
-      <td>${getCategory(row)}</td>
-      <td><span class="badge ${isFound ? 'found' : 'missing'}">${isFound ? 'Found' : 'Missing'}</span></td>
+    html += `
+      <tr>
+        <td>${getOrgName(row)}</td>
+        <td>${row.serial_number || '—'}</td>
+        <td>${getCategory(row)}</td>
+        <td><span class="badge ${isFound ? 'found' : 'missing'}">${isFound ? 'Found' : 'Missing'}</span></td>
+      </tr>
     `;
-    deviceListBody.appendChild(tr);
   }
 
+  deviceListBody.innerHTML = html;
   deviceListMeta.textContent = `${filtered.length} of ${allRows.length} devices`;
 }
 
@@ -342,16 +343,13 @@ function findMatch(raw) {
 // ── Process a single scan ──
 function processScan(inputValue) {
   const key = inputValue.trim().toLowerCase();
-  if (!key) return;
+  if (!key) return { found: false, message: null };
 
   // Track as unique scan input
   uniqueScannedInputs.add(key);
 
   if (!knownByInventoryId.size) {
-    setStatus('Upload a CSV before scanning.', 'error');
-    updateStatsUI();
-    saveSession();
-    return;
+    return { found: false, message: 'Upload a CSV before scanning.', type: 'error' };
   }
 
   const row = findMatch(inputValue);
@@ -361,17 +359,14 @@ function processScan(inputValue) {
       uniqueFoundIds.add(id);
       markFoundInOrg(row);
     }
-    setStatus(`Found: ${row.inventory_id} · ${row.product_title}`, 'success');
-    vibrate(80);
-    updateStatsUI();
-    renderOrgGrid();
-    renderDeviceList();
-    saveSession();
-  } else {
-    setStatus(`Not found: ${inputValue}`, 'error');
-    updateStatsUI();
-    saveSession();
+    return {
+      found: true,
+      message: `Found: ${row.inventory_id} · ${row.product_title}`,
+      type: 'success',
+    };
   }
+
+  return { found: false, message: `Not found: ${inputValue}`, type: 'error' };
 }
 
 function parseScanBuffer(value) {
@@ -453,10 +448,42 @@ confirmReplace.addEventListener('click', () => {
 scanInput.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
+
   const tokens = parseScanBuffer(scanInput.value);
   scanInput.value = '';
   if (!tokens.length) return;
-  for (const t of tokens) processScan(t);
+
+  let foundCountInBurst = 0;
+  let lastMessage = null;
+  let lastType = null;
+
+  for (const t of tokens) {
+    const result = processScan(t);
+    if (!result || !result.message) continue;
+
+    if (result.found) foundCountInBurst += 1;
+    lastMessage = result.message;
+    lastType = result.type;
+  }
+
+  if (lastMessage) setStatus(lastMessage, lastType);
+
+  // Batch heavy updates once per burst
+  updateStatsUI();
+  renderOrgGrid();
+  renderDeviceList();
+  saveSession();
+
+  // Vibrate per found item (single call pattern avoids overwrite from rapid repeats)
+  if (foundCountInBurst > 0) {
+    const pattern = [];
+    for (let i = 0; i < foundCountInBurst; i += 1) {
+      pattern.push(80);
+      if (i < foundCountInBurst - 1) pattern.push(70);
+    }
+    vibrate(pattern);
+  }
+
   focusScannerInput();
 });
 
