@@ -45,6 +45,8 @@ const knownByInventoryId = new Map();   // id(lower) -> row
 const knownBySerial = new Map();        // serial(lower) -> row
 const orgStats = new Map();             // orgName -> { total, foundSet }
 
+const DEVICE_LIST_DEFAULT_VISIBLE = false;
+
 let allRows = [];                       // all CSV rows
 const uniqueScannedInputs = new Set();  // distinct scan inputs (for "Total Scans")
 const uniqueFoundIds = new Set();       // distinct inventory_ids found
@@ -287,7 +289,7 @@ function getFilteredRows() {
 }
 
 function renderDeviceList() {
-  if (!allRows.length) {
+  if (!allRows.length || !DEVICE_LIST_DEFAULT_VISIBLE) {
     deviceListSection.style.display = 'none';
     return;
   }
