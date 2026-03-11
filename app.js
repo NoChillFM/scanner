@@ -6,6 +6,7 @@
 const themeBtn = document.getElementById('themeBtn');
 const csvFileInput = document.getElementById('csvFile');
 const fileBtnTrigger = document.getElementById('fileBtnTrigger');
+const exportCsvBtn = document.getElementById('exportCsvBtn');
 const fileNameEl = document.getElementById('fileName');
 
 const scanInput = document.getElementById('scanInput');
@@ -328,6 +329,68 @@ function refreshAllUI() {
   renderOrgGrid();
   populateFilterDropdowns();
   renderDeviceList();
+  updateExportBtn();
+}
+
+function updateExportBtn() {
+  exportCsvBtn.disabled = allRows.length === 0;
+}
+
+function escapeCsvValue(val) {
+  const str = String(val ?? '');
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function exportCsv() {
+  if (!allRows.length) return;
+  
+  // Get original headers from the first row
+  const originalHeaders = Object.keys(allRows[0]);
+  const headers = [...originalHeaders, 'Status'];
+  
+  // Separate found and not_found
+  const foundRows = [];
+  const notFoundRows = [];
+  
+  for (const row of allRows) {
+    const id = (row.inventory_id || '').trim().toLowerCase();
+    const isFound = uniqueFoundIds.has(id);
+    if (isFound) {
+      foundRows.push(row);
+    } else {
+      notFoundRows.push(row);
+    }
+  }
+  
+  // Build CSV: Found first, then Not_Found
+  const lines = [headers.map(escapeCsvValue).join(',')];
+  
+  for (const row of foundRows) {
+    const values = originalHeaders.map(h => escapeCsvValue(row[h]));
+    values.push('Found');
+    lines.push(values.join(','));
+  }
+  
+  for (const row of notFoundRows) {
+    const values = originalHeaders.map(h => escapeCsvValue(row[h]));
+    values.push('Not_Found');
+    lines.push(values.join(','));
+  }
+  
+  const csvContent = lines.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory_export_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── Vibrate ──
@@ -409,6 +472,9 @@ themeBtn.addEventListener('click', () => {
 
 // File button opens hidden input
 fileBtnTrigger.addEventListener('click', () => csvFileInput.click());
+
+// Export CSV
+exportCsvBtn.addEventListener('click', () => exportCsv());
 
 // CSV file selected
 csvFileInput.addEventListener('change', async (e) => {
@@ -514,7 +580,7 @@ scannerIndicator.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => {
   const t = e.target;
   if (t === scanInput) return;
-  if (t.closest('#csvFile, #fileBtnTrigger, #confirmOverlay, .filters-row, .theme-toggle')) return;
+  if (t.closest('#csvFile, #fileBtnTrigger, #exportCsvBtn, #confirmOverlay, .filters-row, .theme-toggle')) return;
   if (!scanInput.matches(':focus')) focusScannerInput();
 });
 

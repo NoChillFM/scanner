@@ -152,6 +152,15 @@
     .file-btn:active { transform: scale(0.97); }
     .file-btn svg { flex-shrink: 0; }
 
+    .export-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .export-btn:not(:disabled):hover { background: var(--primary-hover); }
+
     .file-name {
       font-size: 0.8rem;
       color: var(--muted);
@@ -561,6 +570,14 @@
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
           Choose File
+        </button>
+        <button class="file-btn export-btn" id="exportCsvBtn" type="button" aria-label="Export CSV" title="Export results as CSV" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export CSV
         </button>
         <span id="fileName" class="file-name">No file chosen</span>
       </div>
